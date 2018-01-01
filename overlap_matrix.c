@@ -152,7 +152,6 @@ int main (int argc, char** argv) {
     for (int i = 0; i < n; i = i+1) {
         if (used_strings[i] == false)
             printf("%s\n", reads[i]);
-    }
-    // Ricorro fino a che ho fuso tutte le stringhe 
+    } 
     return 0;
 }
