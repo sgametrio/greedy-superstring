@@ -5,12 +5,15 @@
 // n: numero reads
 // l: read length
 
-// complexity: O(n*n*l*l)
+// complexity: O(n*n*l*l + n*n*n)
+// n*n*l*l is time calculating overlaps
+// n*n*n is time calculating max in the matrix
 
 /** TODOs:
- *  better complexity
- *  dynamic memory allocation
- *  change data structure to SA if possible
+ *  better complexity (non so quanto sia fattibile)
+ *  dynamic memory allocation 
+ *  change data structure to SA if possible 
+ * 
  */
 
 #include <stdio.h>
@@ -70,10 +73,6 @@ int main (int argc, char** argv) {
     input_file = fopen(argv[1], "r");
     assert(input_file != NULL);
 
-    // Assuming first line is the superstring so I can check the output
-    char superstring[MAX_SUPERSTRING_LENGTH];
-    assert(fgets(superstring, sizeof(superstring), input_file));
-
     // TODO: dynamic memory allocation
     char reads[MAX_READS][MAX_READ_LENGTH];
     char temp[MAX_READS][MAX_READ_LENGTH];
@@ -89,8 +88,8 @@ int main (int argc, char** argv) {
         reads[i][strlen(reads[i])-1] = '\0';
     }
 
-    // Calcolo overlap (numero caratteri che non overlappano) fra tutte le reads e salvo in una matrice di overlap
-    // La matrice è n*n e l'overlap non è simmetrica: per ogni coppia (i,j) si calcola overlap di un suffisso di i come prefisso di j
+    // Calcolo overlap fra tutte le reads e salvo in una matrice di overlap
+    // La matrice è n*n e non è simmetrica: per ogni coppia (i,j) si calcola overlap di un suffisso di i come prefisso di j
     int overlap_matrix[n][n];
 
     for (int i = 0; i < n; i = i+1) {
@@ -109,6 +108,7 @@ int main (int argc, char** argv) {
     }
     // Max su matrice di overlap per trovare indici i e j
     // Fondo i e j mettendo a MAX_READ_LENGTH+1 tutti gli overlap in posizione i e in posizione j aggiorno tutti gli overlap e salvo la stringa fusa
+    
     for (int h = 0; h < n-1; h = h+1) {
         // conto le stringhe fuse, devono essere tutte (n-1 fusioni)
         int max = -1;
@@ -131,15 +131,12 @@ int main (int argc, char** argv) {
                 }
             }
         }
-        //printf("Max: %d in posizione %d %d\n", max, ii, jj);
         // Ho trovato il max, fondo le stringhe i e j in modo che il suffisso di i sia prefisso di j
-        //printf("Fondo %s + %s\n", reads[ii], reads[jj]);
         strcat(reads[ii], reads[jj]+max);
-        //printf("Diventa %s\n", reads[ii]);
         // in posizione ii avrò la nuova stringa fusa e jj la segno come posizione utilizzata
         used_strings[jj] = true;
 
-        // Ricalcolo gli overlap solo per la nuova temp superstring evitando le stringhe già usate
+        // Ricalcolo gli overlap SOLO per la nuova stringa evitando le stringhe già usate
         for (int i = 0; i < n; i = i+1) {
             if (used_strings[i] == false && i != ii) {
                 overlap_matrix[i][ii] = overlap(reads[i], reads[ii]);
@@ -147,8 +144,7 @@ int main (int argc, char** argv) {
             }
         }
     }
-    // All'ultimo passo devo comunicare in che posizione si trova la superstringa risultato
-    // sarà l'unica posizione settata a false
+    // la superstringa risultato si trova nell'unica posizione settata a false
     for (int i = 0; i < n; i = i+1) {
         if (used_strings[i] == false)
             printf("%s\n", reads[i]);
