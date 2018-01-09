@@ -1,20 +1,6 @@
-// Read from file many strings of length K and find the greedy lowest superstring 
+// Read from file many strings and find the lowest superstring using greedy algorithm
 // USAGE: <executable> <input_file>
 // OUTPUT: <superstring>
-
-// n: numero reads
-// l: read length
-
-// complexity: O(n*n*l*l + n*n*n)
-// n*n*l*l is time calculating overlaps
-// n*n*n is time calculating max in the matrix
-
-/** TODOs:
- *  better complexity (non so quanto sia fattibile)
- *  dynamic memory allocation 
- *  change data structure to SA if possible 
- * 
- */
 
 #include <stdio.h>
 #include <assert.h>
@@ -25,27 +11,23 @@
 
 #define MAX_READS 100
 #define MAX_READ_LENGTH 20
-#define MAX_SUPERSTRING_LENGTH 2000
 
-
-/*
- * @return the max overlap between a suffix of read1 and a prefix of read2.
- *         returns strlen(read2) if and only if read2 is contained in read1.
- * 
- * complexity: O(l*m) (l and m are reads length)
+/** Compute max overlap between a suffix of read1 and a prefix of read2
+ * @param read1: first string processed
+ * @param read2: second string processed
+ * @return max overlap. Returns strlen(read2) if and only if read2 is contained in its entirety in read1.
  */          
 int overlap(char* read1, char* read2) {
     int max_overlap = 0;
     int read1_length = strlen(read1);
     int read2_length = strlen(read2);
     for (int i = read1_length-1; i >= 0; i = i-1) {
-        int j = 0;
+        int j = 0;  // current number of overlapping characters
         bool overlapping = true;
         while (j < read2_length && i+j < read1_length && overlapping) {
             if (read1[i+j] != read2[j]) {
                 overlapping = false;
             } else {
-                // j is the current number of characters overlapping
                 j = j+1;
             }
         }
@@ -67,38 +49,39 @@ int overlap(char* read1, char* read2) {
 
 int main (int argc, char** argv) {
     // <executable> <input_file>
-    assert(argc > 1 && "Need exactly one additional argument (filename)");
+    assert(argc > 1 && "Need one additional argument (filename)");
 
     FILE * input_file;
     input_file = fopen(argv[1], "r");
-    assert(input_file != NULL);
+    assert(input_file != NULL && "Input file not found");
 
     // TODO: dynamic memory allocation
     char reads[MAX_READS][MAX_READ_LENGTH];
-    char temp[MAX_READS][MAX_READ_LENGTH];
     int n = 0;
     while (fgets(reads[n], sizeof(reads[n]), input_file)) {
         n = n+1;
     }
-
     fclose(input_file);
 
-    // strip '\n' read from file from n-1 strings
+    // '\n' is counted as a valid character in strings so we have to strip it
+    // This is done by inserting a terminator ('\0') at the last position
     for (int i = 0; i < n-1; i = i+1) {
         reads[i][strlen(reads[i])-1] = '\0';
     }
 
-    // Calcolo overlap fra tutte le reads e salvo in una matrice di overlap
-    // La matrice è n*n e non è simmetrica: per ogni coppia (i,j) si calcola overlap di un suffisso di i come prefisso di j
+    /** Compute overlaps between every pair of reads and save them into a matrix
+     * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
+     * is computed as the overlap of a suffix of i to a prefix of j
+     *  
+     */
     int overlap_matrix[n][n];
 
     for (int i = 0; i < n; i = i+1) {
         for (int j = 0; j < n; j = j+1) {
-            // Do not calculate overlap between same string
             if (i != j)
                 overlap_matrix[i][j] = overlap(reads[i], reads[j]);
             else
-                overlap_matrix[i][j] = -1; 
+                overlap_matrix[i][j] = -1; // Do not calculate overlap between same strings
         }
     }
 
@@ -106,22 +89,19 @@ int main (int argc, char** argv) {
     for (int i = 0; i < n; i = i+1) {
         used_strings[i] = false;
     }
-    // Max su matrice di overlap per trovare indici i e j
-    // Fondo i e j mettendo a MAX_READ_LENGTH+1 tutti gli overlap in posizione i e in posizione j aggiorno tutti gli overlap e salvo la stringa fusa
     
+    // For n-1 times I have to melt the two most overlapping strings
+    // Compute n-1 times the max on a matrix (This has to be improved)
     for (int h = 0; h < n-1; h = h+1) {
-        // conto le stringhe fuse, devono essere tutte (n-1 fusioni)
         int max = -1;
-        // temp indexes
-        int ii = -1;
+        int ii = -1;    // ii and jj are temp indexes
         int jj = -1;
         for (int i = 0; i < n; i = i+1) {
-            if (used_strings[i] == true)
+            if (used_strings[i] == true)    // Skip used strings
                 continue;
             
             for (int j = 0; j < n; j = j+1) {
-                // do not count same strings and used ones
-                if (i == j || used_strings[j] == true)
+                if (i == j || used_strings[j] == true)  // do not count same strings and used ones
                     continue;
 
                 if (overlap_matrix[i][j] > max) {
@@ -131,12 +111,17 @@ int main (int argc, char** argv) {
                 }
             }
         }
-        // Ho trovato il max, fondo le stringhe i e j in modo che il suffisso di i sia prefisso di j
-        strcat(reads[ii], reads[jj]+max);
-        // in posizione ii avrò la nuova stringa fusa e jj la segno come posizione utilizzata
-        used_strings[jj] = true;
+        used_strings[jj] = true;    // Mark jj as used
+        if (max == strlen(reads[jj]))
+            // reads[jj] is contained in its entirety in reads[ii] so:
+            // * don't have to melt them
+            // * don't have to compute again overlaps
+            continue;
 
-        // Ricalcolo gli overlap SOLO per la nuova stringa evitando le stringhe già usate
+        // melt reads[ii] and reads[jj] so that the suffix of ii is prefix of jj by max characters
+        strcat(reads[ii], reads[jj]+max);
+
+        // Compute again new overlaps ONLY for new melt string
         for (int i = 0; i < n; i = i+1) {
             if (used_strings[i] == false && i != ii) {
                 overlap_matrix[i][ii] = overlap(reads[i], reads[ii]);
@@ -144,7 +129,7 @@ int main (int argc, char** argv) {
             }
         }
     }
-    // la superstringa risultato si trova nell'unica posizione settata a false
+    // Resulting superstring is found in the unique "false" position
     for (int i = 0; i < n; i = i+1) {
         if (used_strings[i] == false)
             printf("%s\n", reads[i]);
