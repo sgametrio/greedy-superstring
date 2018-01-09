@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MAX_READS 100
 #define MAX_READ_LENGTH 20
 
 /** Compute max overlap between a suffix of read1 and a prefix of read2
@@ -52,25 +51,38 @@ int main (int argc, char** argv) {
     // <executable> <input_file>
     assert(argc > 1 && "Need one additional argument (filename)");
 
-    FILE * input_file;
+    FILE* input_file;
     input_file = fopen(argv[1], "r");
     assert(input_file != NULL && "Input file not found");
 
-    // TODO: dynamic memory allocation
-    char reads[MAX_READS][MAX_READ_LENGTH];
-    size_t n = 0;
-    while (fgets(reads[n], sizeof(reads[n]), input_file)) {
+    char temp_read[MAX_READ_LENGTH];
+
+
+    size_t n = 0;   // Number of reads (file lines)
+    // Count lines
+    while (fgets(temp_read, MAX_READ_LENGTH, input_file)) {
         n = n+1;
     }
-    fclose(input_file);
     assert(n >= 1 && "File hasn't enough lines");
+
+    rewind(input_file);     // Return to the beginning of file
+
+    char** reads = malloc(n * sizeof(char*));
+    assert(reads != NULL && "Can't allocate enough memory");
 
     // '\n' is counted as a valid character in strings so we have to strip it
     // This is done by inserting a terminator ('\0') at the last position
+    // We don't have to strip it from the last read
     for (size_t i = 0; i < n-1; i = i+1) {
-        reads[i][strlen(reads[i])-1] = '\0';
+        fgets(temp_read, MAX_READ_LENGTH, input_file);
+        temp_read[strlen(temp_read)-1] = '\0';
+        reads[i] = strdup(temp_read);
     }
+    fgets(temp_read, MAX_READ_LENGTH, input_file);
+    reads[n-1] = strdup(temp_read);
 
+    fclose(input_file);
+    
     /** Compute overlaps between every pair of reads and save them into a matrix
      * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
      * is computed as the overlap of a suffix of i to a prefix of j
@@ -134,5 +146,8 @@ int main (int argc, char** argv) {
         if (used_strings[i] == false)
             printf("%s\n", reads[i]);
     } 
+
+    // Cleanup dynamic memory
+    free(reads);
     return 0;
 }
