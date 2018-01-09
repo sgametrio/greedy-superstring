@@ -1,4 +1,4 @@
-// Read from file many strings and find the lowest superstring using greedy algorithm
+// Read from file many strings and find the shortest superstring using greedy algorithm
 // USAGE: <executable> <input_file>
 // OUTPUT: <superstring>
 
@@ -17,12 +17,13 @@
  * @param read2: second string processed
  * @return max overlap. Returns strlen(read2) if and only if read2 is contained in its entirety in read1.
  */          
-int overlap(char* read1, char* read2) {
-    int max_overlap = 0;
-    int read1_length = strlen(read1);
-    int read2_length = strlen(read2);
+size_t overlap(char* read1, char* read2) {
+    size_t max_overlap = 0;
+    size_t read1_length = strlen(read1);
+    size_t read2_length = strlen(read2);
+    // i must be declared as int because size_t vars can't go <0
     for (int i = read1_length-1; i >= 0; i = i-1) {
-        int j = 0;  // current number of overlapping characters
+        size_t j = 0;  // current number of overlapping characters
         bool overlapping = true;
         while (j < read2_length && i+j < read1_length && overlapping) {
             if (read1[i+j] != read2[j]) {
@@ -57,27 +58,27 @@ int main (int argc, char** argv) {
 
     // TODO: dynamic memory allocation
     char reads[MAX_READS][MAX_READ_LENGTH];
-    int n = 0;
+    size_t n = 0;
     while (fgets(reads[n], sizeof(reads[n]), input_file)) {
         n = n+1;
     }
     fclose(input_file);
+    assert(n >= 1 && "File hasn't enough lines");
 
     // '\n' is counted as a valid character in strings so we have to strip it
     // This is done by inserting a terminator ('\0') at the last position
-    for (int i = 0; i < n-1; i = i+1) {
+    for (size_t i = 0; i < n-1; i = i+1) {
         reads[i][strlen(reads[i])-1] = '\0';
     }
 
     /** Compute overlaps between every pair of reads and save them into a matrix
      * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
      * is computed as the overlap of a suffix of i to a prefix of j
-     *  
      */
     int overlap_matrix[n][n];
 
-    for (int i = 0; i < n; i = i+1) {
-        for (int j = 0; j < n; j = j+1) {
+    for (size_t i = 0; i < n; i = i+1) {
+        for (size_t j = 0; j < n; j = j+1) {
             if (i != j)
                 overlap_matrix[i][j] = overlap(reads[i], reads[j]);
             else
@@ -86,21 +87,20 @@ int main (int argc, char** argv) {
     }
 
     bool used_strings[n];
-    for (int i = 0; i < n; i = i+1) {
+    for (size_t i = 0; i < n; i = i+1) {
         used_strings[i] = false;
     }
     
     // For n-1 times I have to melt the two most overlapping strings
     // Compute n-1 times the max on a matrix (This has to be improved)
-    for (int h = 0; h < n-1; h = h+1) {
+    for (size_t h = 0; h < n-1; h = h+1) {
         int max = -1;
-        int ii = -1;    // ii and jj are temp indexes
-        int jj = -1;
-        for (int i = 0; i < n; i = i+1) {
+        size_t ii, jj;    // temp indexes
+        for (size_t i = 0; i < n; i = i+1) {
             if (used_strings[i] == true)    // Skip used strings
                 continue;
             
-            for (int j = 0; j < n; j = j+1) {
+            for (size_t j = 0; j < n; j = j+1) {
                 if (i == j || used_strings[j] == true)  // do not count same strings and used ones
                     continue;
 
@@ -122,7 +122,7 @@ int main (int argc, char** argv) {
         strcat(reads[ii], reads[jj]+max);
 
         // Compute again new overlaps ONLY for new melt string
-        for (int i = 0; i < n; i = i+1) {
+        for (size_t i = 0; i < n; i = i+1) {
             if (used_strings[i] == false && i != ii) {
                 overlap_matrix[i][ii] = overlap(reads[i], reads[ii]);
                 overlap_matrix[ii][i] = overlap(reads[ii], reads[i]);
@@ -130,7 +130,7 @@ int main (int argc, char** argv) {
         }
     }
     // Resulting superstring is found in the unique "false" position
-    for (int i = 0; i < n; i = i+1) {
+    for (size_t i = 0; i < n; i = i+1) {
         if (used_strings[i] == false)
             printf("%s\n", reads[i]);
     } 
