@@ -74,11 +74,11 @@ int main (int argc, char** argv) {
     // This is done by inserting a terminator ('\0') at the last position
     // We don't have to strip it from the last read
     for (size_t i = 0; i < n-1; i = i+1) {
-        fgets(temp_read, MAX_READ_LENGTH, input_file);
+        assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
         temp_read[strlen(temp_read)-1] = '\0';
         reads[i] = strdup(temp_read);
     }
-    fgets(temp_read, MAX_READ_LENGTH, input_file);
+    assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
     reads[n-1] = strdup(temp_read);
 
     fclose(input_file);
@@ -87,7 +87,13 @@ int main (int argc, char** argv) {
      * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
      * is computed as the overlap of a suffix of i to a prefix of j
      */
-    int overlap_matrix[n][n];
+    //int overlap_matrix[n][n];
+    int** overlap_matrix = malloc(n * sizeof(int*));
+    assert(overlap_matrix != NULL && "Cannot allocate more memory");
+    for (size_t i = 0; i < n; i = i+1) {
+        overlap_matrix[i] = malloc(n * sizeof(int));
+        assert(overlap_matrix[i] != NULL && "Cannot allocate more memory");
+    }
 
     for (size_t i = 0; i < n; i = i+1) {
         for (size_t j = 0; j < n; j = j+1) {
@@ -98,7 +104,8 @@ int main (int argc, char** argv) {
         }
     }
 
-    bool used_strings[n];
+    bool* used_strings = malloc(n * sizeof(bool));
+    assert(used_strings != NULL && "Cannot allocate more memory");
     for (size_t i = 0; i < n; i = i+1) {
         used_strings[i] = false;
     }
@@ -148,6 +155,12 @@ int main (int argc, char** argv) {
     } 
 
     // Cleanup dynamic memory
+    for (int i = 0; i < n; i = i+1) {
+        free(reads[i]);
+        free(overlap_matrix[i]);
+    }
     free(reads);
+    free(overlap_matrix);
+    free(used_strings);
     return 0;
 }
