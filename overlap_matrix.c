@@ -137,6 +137,8 @@ int main (int argc, char** argv) {
             // * don't have to compute again overlaps
             continue;
 
+        reads[ii] = realloc(reads[ii], strlen(reads[ii]) + strlen(reads[jj]) - max + 1);
+        assert(reads[ii] != NULL);
         // melt reads[ii] and reads[jj] so that the suffix of ii is prefix of jj by max characters
         strcat(reads[ii], reads[jj]+max);
 
