@@ -14,17 +14,18 @@
 /** Compute max overlap between a suffix of read1 and a prefix of read2
  * @param read1: first string processed
  * @param read2: second string processed
+ * @param length1: first string length
+ * @param length2: second string length
  * @return max overlap. Returns strlen(read2) if and only if read2 is contained in its entirety in read1.
- */          
-size_t overlap(char* read1, char* read2) {
+ */ 
+size_t overlap(char* read1, char* read2, size_t length1, size_t length2) {
     size_t max_overlap = 0;
-    size_t read1_length = strlen(read1);
-    size_t read2_length = strlen(read2);
+    
     // i must be declared as int because size_t vars can't go <0
-    for (int i = read1_length-1; i >= 0; i = i-1) {
+    for (int i = length1-1; i >= 0; i = i-1) {
         size_t j = 0;  // current number of overlapping characters
         bool overlapping = true;
-        while (j < read2_length && i+j < read1_length && overlapping) {
+        while (j < length2 && i+j < length1 && overlapping) {
             if (read1[i+j] != read2[j]) {
                 overlapping = false;
             } else {
@@ -32,19 +33,25 @@ size_t overlap(char* read1, char* read2) {
             }
         }
         // We have 3 cases for the cycle to exit:
-        // 1) j == read2_length means that read2 is a substring of read1
+        // 1) j == length2 means that read2 is a substring of read1
         // this means that no other best solution can be found
-        if (j == read2_length) {
-            return read2_length;
+        if (j == length2) {
+            return length2;
         }
-        // 2) i+j == read1_length means a prefix of read2 is a suffix of read1
+        // 2) i+j == length1 means a prefix of read2 is a suffix of read1
         // Candidate to be the best local overlap
-        if (i+j == read1_length) {
+        if (i+j == length1) {
             max_overlap = j;
         }
         // 3) overlapping == false means that we must go on
     }
     return max_overlap;
+}
+
+size_t overlap_unfixed(char* read1, char* read2) {
+    size_t length1 = strlen(read1);
+    size_t length2 = strlen(read2);
+    return overlap(read1, read2, length1, length2);
 }
 
 int main (int argc, char** argv) {
@@ -69,16 +76,21 @@ int main (int argc, char** argv) {
 
     char** reads = malloc(n * sizeof(char*));
     assert(reads != NULL && "Can't allocate enough memory");
+    // Save reads lengths to avoid recomputing them every time
+    size_t* lengths = malloc(n * sizeof(size_t));
 
     // '\n' is counted as a valid character in strings so we have to strip it
     // This is done by inserting a terminator ('\0') at the last position
     // We don't have to strip it from the last read
     for (size_t i = 0; i < n-1; i = i+1) {
         assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
-        temp_read[strlen(temp_read)-1] = '\0';
+        lengths[i] = strlen(temp_read);
+        lengths[i] = lengths[i]-1;
+        temp_read[lengths[i]] = '\0';
         reads[i] = strdup(temp_read);
     }
     assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
+    lengths[n-1] = strlen(temp_read);
     reads[n-1] = strdup(temp_read);
 
     fclose(input_file);
@@ -87,7 +99,6 @@ int main (int argc, char** argv) {
      * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
      * is computed as the overlap of a suffix of i to a prefix of j
      */
-    //int overlap_matrix[n][n];
     int** overlap_matrix = malloc(n * sizeof(int*));
     assert(overlap_matrix != NULL && "Cannot allocate more memory");
     for (size_t i = 0; i < n; i = i+1) {
@@ -98,7 +109,7 @@ int main (int argc, char** argv) {
     for (size_t i = 0; i < n; i = i+1) {
         for (size_t j = 0; j < n; j = j+1) {
             if (i != j)
-                overlap_matrix[i][j] = overlap(reads[i], reads[j]);
+                overlap_matrix[i][j] = overlap(reads[i], reads[j], lengths[i], lengths[j]);
             else
                 overlap_matrix[i][j] = -1; // Do not calculate overlap between same strings
         }
@@ -131,22 +142,24 @@ int main (int argc, char** argv) {
             }
         }
         used_strings[jj] = true;    // Mark jj as used
-        if (max == strlen(reads[jj]))
+        if (max == lengths[jj])
             // reads[jj] is contained in its entirety in reads[ii] so:
             // * don't have to melt them
             // * don't have to compute again overlaps
             continue;
 
-        reads[ii] = realloc(reads[ii], strlen(reads[ii]) + strlen(reads[jj]) - max + 1);
+        reads[ii] = realloc(reads[ii], lengths[ii] + lengths[jj] - max + 1);
         assert(reads[ii] != NULL);
         // melt reads[ii] and reads[jj] so that the suffix of ii is prefix of jj by max characters
         strcat(reads[ii], reads[jj]+max);
+        // Save updated length
+        lengths[ii] = lengths[ii] + lengths[jj] - max;
 
         // Compute again new overlaps ONLY for new melt string
         for (size_t i = 0; i < n; i = i+1) {
             if (used_strings[i] == false && i != ii) {
-                overlap_matrix[i][ii] = overlap(reads[i], reads[ii]);
-                overlap_matrix[ii][i] = overlap(reads[ii], reads[i]);
+                overlap_matrix[i][ii] = overlap(reads[i], reads[ii], lengths[i], lengths[ii]);
+                overlap_matrix[ii][i] = overlap(reads[ii], reads[i], lengths[ii], lengths[i]);
             }
         }
     }
@@ -163,6 +176,7 @@ int main (int argc, char** argv) {
     }
     free(reads);
     free(overlap_matrix);
+    free(lengths);
     free(used_strings);
     return 0;
 }
