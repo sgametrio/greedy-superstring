@@ -1,8 +1,18 @@
 # Greedy approximation algorithm to find shortest common superstring
 
-## Time
+## Computational complexity
 
-Given N reads of K max characters the algorithm takes O(N^2*K^2) to calculate the superstring
+Given `n` reads of `k` max characters (`k` is hardcoded):
+
+* `overlap` = `O(k^2)` -> overlap between 2 reads
+* `from_file` = `O(n*k)` -> read input
+* `compute_lengths` = `O(n*k)` -> count and save reads lenghts
+
+Build the Dynamic Programming matrix `[n, n]` for overlaps costs `overlap` for every cell. So `O(n^2*k^2)`.
+
+Computing max `n-1` times on the overlaps matrix costs `O(n^3)`.
+
+So total computational time is: `O(n^2*k^2 + n^3)`.
 
 ## Usage
 
