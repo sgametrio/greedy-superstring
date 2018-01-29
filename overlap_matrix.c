@@ -1,6 +1,6 @@
 // Read from file many strings and find the shortest superstring using greedy algorithm
 // USAGE: <executable> <input_file>
-// OUTPUT: <superstring>
+// OUTPUT: <shortest_superstring>
 
 #include <stdio.h>
 #include <assert.h>
@@ -9,13 +9,13 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define MAX_READ_LENGTH 20
+#define MAX_READ_LENGTH 200
 
 /** Compute max overlap between a suffix of read1 and a prefix of read2
  * @param read1: first string processed
  * @param read2: second string processed
- * @param length1: first string length
- * @param length2: second string length
+ * @param length1: first string length (to avoid computing it every time)
+ * @param length2: second string length (to avoid computing it every time)
  * @return max overlap. Returns strlen(read2) if and only if read2 is contained in its entirety in read1.
  */ 
 size_t overlap(char* read1, char* read2, size_t length1, size_t length2) {
@@ -48,55 +48,88 @@ size_t overlap(char* read1, char* read2, size_t length1, size_t length2) {
     return max_overlap;
 }
 
+/** Compute overlap between 2 reads without knowing their lenghts
+ * Helper of: overlap(char*, char*, size_t, size_t)
+ * @param read1: first read
+ * @param read2: second read
+ * @return overlap between read1 and read2
+ */
 size_t overlap_unfixed(char* read1, char* read2) {
     size_t length1 = strlen(read1);
     size_t length2 = strlen(read2);
     return overlap(read1, read2, length1, length2);
 }
 
-int main (int argc, char** argv) {
-    // <executable> <input_file>
-    assert(argc > 1 && "Need one additional argument (filename)");
-
+/** Read a file line by line and count # of lines
+ * @param filename: name of the file to be read
+ * @param lines: pointer to number of lines
+ * @return char** with allocated memory containing every line of the file
+ * It saves the # of lines at (*lines)
+ */
+char** from_file(char* filename, size_t* lines) {
     FILE* input_file;
-    input_file = fopen(argv[1], "r");
+    input_file = fopen(filename, "r");
     assert(input_file != NULL && "Input file not found");
 
     char temp_read[MAX_READ_LENGTH];
-
-
-    size_t n = 0;   // Number of reads (file lines)
     // Count lines
+    size_t n = 0;
     while (fgets(temp_read, MAX_READ_LENGTH, input_file)) {
         n = n+1;
     }
     assert(n >= 1 && "File hasn't enough lines");
 
     rewind(input_file);     // Return to the beginning of file
-
+    // Now read every single line
     char** reads = malloc(n * sizeof(char*));
     assert(reads != NULL && "Can't allocate enough memory");
-    // Save reads lengths to avoid recomputing them every time
-    size_t* lengths = malloc(n * sizeof(size_t));
 
-    // '\n' is counted as a valid character in strings so we have to strip it
+    // '\n' is counted as a valid character in file strings so we have to strip it
     // This is done by inserting a terminator ('\0') at the last position
-    // We don't have to strip it from the last read
+    // NB: We don't have to strip it from the last read
     for (size_t i = 0; i < n-1; i = i+1) {
         assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
-        lengths[i] = strlen(temp_read);
-        lengths[i] = lengths[i]-1;
-        temp_read[lengths[i]] = '\0';
+        temp_read[strlen(temp_read)-1] = '\0';
         reads[i] = strdup(temp_read);
     }
     assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
-    lengths[n-1] = strlen(temp_read);
     reads[n-1] = strdup(temp_read);
 
     fclose(input_file);
     
+    // return reads and # of lines counted
+    (*lines) = n;
+    return reads;
+}
+
+
+/** Given an array of strings, and its length, returns and array of size_t
+ * containing lengths line by line
+ * @param reads: array of strings that has to be counted
+ * @param n: # of strings
+ * @return size_t* to allocated memory with computed lengths that has to be freed
+ */
+size_t* compute_lengths(char** reads, size_t n) {
+    size_t* lengths = malloc(n * sizeof(size_t));
+    for (size_t i = 0; i < n; i = i+1) {
+        lengths[i] = strlen(reads[i]);
+    }
+    return lengths;
+}
+
+int main (int argc, char** argv) {
+    // Must be: <executable> <input_file>
+    assert(argc > 1 && "Need one additional argument (filename)");
+
+    size_t *lines = malloc(sizeof(size_t));   // Number of reads (file lines)
+    char** reads = from_file(argv[1], lines);
+    size_t n = (*lines);    // So that I don't have to dereference it every time
+    
+    // Save reads lengths to avoid recomputing them every time
+    size_t* lengths = compute_lengths(reads, n);
+
     /** Compute overlaps between every pair of reads and save them into a matrix
-     * DP overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
+     * overlap matrix is n*n and it's not symmetric: for every pair (i,j), overlap
      * is computed as the overlap of a suffix of i to a prefix of j
      */
     int** overlap_matrix = malloc(n * sizeof(int*));
@@ -177,6 +210,7 @@ int main (int argc, char** argv) {
     free(reads);
     free(overlap_matrix);
     free(lengths);
+    free(lines);
     free(used_strings);
     return 0;
 }
