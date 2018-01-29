@@ -6,13 +6,19 @@ Given N reads of K max characters the algorithm takes O(N^2*K^2) to calculate th
 
 ## Usage
 
-Compile it and give him a file containing reads:
+Make it and run it passing as first argument the file containing input:
 
-        gcc overlap_matrix.c
-        ./a.out <input_file>
+        make
+        ./greedy-superstring <input_file>
+
+As a working example, we include `input.txt`. Try running this:
+
+        ./greedy-superstring input.txt
+
+Output will be the shortest superstring found.
 
 ## Input format
 
-The file containing reads must be made of N lines without blank lines at the end.
+The file containing reads must be made of a # of lines without blank lines at the end.
 
-Every line contains a read. Check `input.txt` as an example file
+Every line is read as a single string. Check `input.txt` as an example file
