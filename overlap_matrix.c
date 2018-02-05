@@ -72,7 +72,9 @@ char** from_file(char* filename, size_t* lines) {
     assert(input_file != NULL && "Input file not found");
 
     char temp_read[MAX_READ_LENGTH];
-    // Count lines
+    // Count lines and check that lines is a real pointer
+    if (lines == NULL)
+        lines = malloc(sizeof(size_t));
     size_t n = 0;
     while (fgets(temp_read, MAX_READ_LENGTH, input_file)) {
         n = n+1;
@@ -123,8 +125,8 @@ int main (int argc, char** argv) {
 
     size_t *lines = malloc(sizeof(size_t));   // Number of reads (file lines)
     char** reads = from_file(argv[1], lines);
-    size_t n = (*lines);    // So that I don't have to dereference it every time
-    
+    size_t n = (*lines);
+
     // Save reads lengths to avoid recomputing them every time
     size_t* lengths = compute_lengths(reads, n);
 
