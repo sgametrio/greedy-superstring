@@ -95,6 +95,9 @@ char** from_file(char* filename, size_t* lines) {
         reads[i] = strdup(temp_read);
     }
     assert(fgets(temp_read, MAX_READ_LENGTH, input_file) && "Cannot read from file\n");
+    // Check if last line has '\n' or not
+    if (temp_read[strlen(temp_read) - 1] == '\n')
+        temp_read[strlen(temp_read)-1] = '\0';
     reads[n-1] = strdup(temp_read);
 
     fclose(input_file);
